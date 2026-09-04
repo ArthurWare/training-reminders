@@ -2,90 +2,410 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Waretown Council - Reminders</title>
 <style>
+  :root {
+    --navy: #1c3144;
+    --paper: #f6f7f9;
+    --card: #ffffff;
+    --border: #dfe3e8;
+    --text: #1c2530;
+    --text-muted: #6b7684;
+    --red: #c0392b;
+    --amber: #c9820a;
+    --green: #2f7a4a;
+  }
+
+  * { box-sizing: border-box; }
+
   body {
-    font-family: Arial, sans-serif;
-    background: #f4f4f4;
     margin: 0;
-    padding: 20px;
-    color: #222;
+    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    background: var(--paper);
+    color: var(--text);
   }
-  h1 {
-    font-size: 20px;
-    margin-bottom: 20px;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-  }
-  th, td {
-    text-align: left;
-    padding: 10px 12px;
-    border-bottom: 1px solid #ddd;
-    font-size: 14px;
-  }
-  th {
-    background: #2c3e50;
+
+  header {
+    background: var(--navy);
     color: #fff;
+    padding: 14px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
   }
-  .synced {
-    color: #2e7d32;
-    font-weight: bold;
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    padding: 20px;
+    align-items: start;
   }
-  .unsynced {
-    color: #b71c1c;
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+
+  .panel + .panel { margin-top: 16px; }
+
+  .panel h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin: 0 0 12px 0;
+    font-weight: 700;
+  }
+
+  select {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--text);
+  }
+
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+
+  .dot.red { background: var(--red); }
+  .dot.amber { background: var(--amber); }
+  .dot.green { background: var(--green); }
+
+  .next-item {
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+
+  .next-item:last-child { margin-bottom: 0; }
+
+  .next-item .title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  .next-item .meta {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+  }
+
+  .cal-header .month {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .cal-nav button {
+    border: none;
+    background: none;
+    font-size: 15px;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 2px 6px;
+  }
+
+  .cal-nav .today {
+    color: var(--navy);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .grid-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--card);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  .grid-days div {
+    text-align: center;
+    padding: 8px 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .grid-weeks {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0 0 6px 6px;
+    overflow: hidden;
+  }
+
+  .cell {
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    min-height: 96px;
+    padding: 6px;
+    position: relative;
+  }
+
+  .cell.other-month { background: #fafbfc; color: #b6bcc4; }
+  .cell.other-month .date-num { color: #c3c9d0; }
+
+  .date-num {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .date-num.today {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--navy);
+    color: #fff;
+    border-radius: 50%;
+  }
+
+  .event {
+    margin-top: 6px;
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    border-left: 3px solid;
+    background: #fbf6ee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .event.red { border-color: var(--red); background: #fbeceb; }
+  .event.amber { border-color: var(--amber); background: #fdf3e3; }
+  .event.green { border-color: var(--green); background: #ecf5ef; }
+
+  .footer-note {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    line-height: 1.5;
   }
 </style>
 </head>
 <body>
 
-<h1>Waretown Council - Upcoming Reminders</h1>
+<header>Waretown Council &middot; Reminders</header>
 
-<table>
-  <tr>
-    <th>Item</th>
-    <th>Due Date</th>
-    <th>Synced to Outlook</th>
-  </tr>
-  <tbody id="reminder-rows"></tbody>
-</table>
+<div class="layout">
+
+  <div>
+    <div class="panel">
+      <h2>Filters</h2>
+      <select id="filter-employee"><option>All employees</option></select>
+      <select id="filter-department"><option>All departments</option></select>
+      <select id="filter-urgency">
+        <option value="all">All urgencies</option>
+        <option value="red">Under 7 days / overdue</option>
+        <option value="amber">Under 30 days</option>
+        <option value="green">30+ days</option>
+      </select>
+      <div class="legend">
+        <div><span class="dot red"></span>Under 7 days / overdue</div>
+        <div><span class="dot amber"></span>Under 30 days</div>
+        <div><span class="dot green"></span>30+ days</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Next up</h2>
+      <div id="next-up"></div>
+    </div>
+
+    <div class="footer-note">
+      Reminders shown here are entered manually. Outlook sync is not yet connected.
+    </div>
+  </div>
+
+  <div>
+    <div class="cal-header">
+      <div class="month" id="cal-month"></div>
+      <div class="cal-nav">
+        <button id="prev-month">&lsaquo;</button>
+        <span class="today" id="go-today">Today</span>
+        <button id="next-month">&rsaquo;</button>
+      </div>
+    </div>
+    <div class="grid-days">
+      <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+    </div>
+    <div class="grid-weeks" id="grid-weeks"></div>
+  </div>
+
+</div>
 
 <script>
   const reminders = [
-    { name: "Boiler service", due: "2027-01-14", synced: false },
-    { name: "MOT", due: "2027-05-21", synced: false },
-    { name: "Vehicle service", due: "2027-01-10", synced: false },
-    { name: "PAT testing", due: "2027-12-01", synced: false },
-    { name: "Priory air con service", due: "2026-09-23", synced: false },
-    { name: "F/Lea air con service", due: "2026-03-23", synced: false }
+    { name: "Boiler service", due: "2027-01-14" },
+    { name: "MOT", due: "2027-05-21" },
+    { name: "Vehicle service", due: "2027-01-10" },
+    { name: "PAT testing", due: "2027-12-01" },
+    { name: "Priory air con service", due: "2026-09-23" },
+    { name: "F/Lea air con service", due: "2026-03-23" }
   ];
 
-  reminders.sort((a, b) => new Date(a.due) - new Date(b.due));
+  const today = new Date();
+  today.setHours(0,0,0,0);
 
-  const tbody = document.getElementById("reminder-rows");
+  function daysUntil(dateStr) {
+    const d = new Date(dateStr);
+    return Math.round((d - today) / (1000 * 60 * 60 * 24));
+  }
 
-  reminders.forEach(item => {
-    const row = document.createElement("tr");
+  function urgencyClass(days) {
+    if (days <= 7) return "red";
+    if (days <= 30) return "amber";
+    return "green";
+  }
 
-    const nameCell = document.createElement("td");
-    nameCell.textContent = item.name;
+  let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const dueCell = document.createElement("td");
-    dueCell.textContent = item.due;
+  function renderNextUp() {
+    const list = [...reminders]
+      .map(r => ({ ...r, days: daysUntil(r.due) }))
+      .sort((a, b) => a.days - b.days);
 
-    const syncCell = document.createElement("td");
-    syncCell.textContent = item.synced ? "Yes" : "No";
-    syncCell.className = item.synced ? "synced" : "unsynced";
+    const el = document.getElementById("next-up");
+    el.innerHTML = "";
+    list.forEach(item => {
+      const cls = urgencyClass(item.days);
+      const div = document.createElement("div");
+      div.className = "next-item";
+      const dateFmt = new Date(item.due).toLocaleDateString("en-GB");
+      const dayLabel = item.days < 0 ? `${Math.abs(item.days)} days overdue` : `${item.days} days`;
+      div.innerHTML = `
+        <div class="title"><span class="dot ${cls}"></span>${item.name}</div>
+        <div class="meta">${dateFmt} &middot; ${dayLabel}</div>
+      `;
+      el.appendChild(div);
+    });
+  }
 
-    row.appendChild(nameCell);
-    row.appendChild(dueCell);
-    row.appendChild(syncCell);
+  function renderCalendar() {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
 
-    tbody.appendChild(row);
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    document.getElementById("cal-month").textContent = `${monthNames[month]} ${year}`;
+
+    const firstOfMonth = new Date(year, month, 1);
+    let startDay = firstOfMonth.getDay();
+    startDay = startDay === 0 ? 6 : startDay - 1;
+
+    const gridStart = new Date(year, month, 1 - startDay);
+
+    const eventsByDate = {};
+    reminders.forEach(r => {
+      const days = daysUntil(r.due);
+      const cls = urgencyClass(days);
+      if (!eventsByDate[r.due]) eventsByDate[r.due] = [];
+      eventsByDate[r.due].push({ name: r.name, cls });
+    });
+
+    const grid = document.getElementById("grid-weeks");
+    grid.innerHTML = "";
+
+    for (let i = 0; i < 42; i++) {
+      const cellDate = new Date(gridStart);
+      cellDate.setDate(gridStart.getDate() + i);
+
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      if (cellDate.getMonth() !== month) cell.classList.add("other-month");
+
+      const isToday = cellDate.getTime() === today.getTime();
+      const numSpan = document.createElement("span");
+      numSpan.className = "date-num" + (isToday ? " today" : "");
+      numSpan.textContent = cellDate.getDate();
+      cell.appendChild(numSpan);
+
+      const key = cellDate.toISOString().slice(0, 10);
+      if (eventsByDate[key]) {
+        eventsByDate[key].forEach(ev => {
+          const evDiv = document.createElement("div");
+          evDiv.className = "event " + ev.cls;
+          evDiv.textContent = ev.name;
+          cell.appendChild(evDiv);
+        });
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  document.getElementById("prev-month").addEventListener("click", () => {
+    viewDate.setMonth(viewDate.getMonth() - 1);
+    renderCalendar();
   });
+
+  document.getElementById("next-month").addEventListener("click", () => {
+    viewDate.setMonth(viewDate.getMonth() + 1);
+    renderCalendar();
+  });
+
+  document.getElementById("go-today").addEventListener("click", () => {
+    viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    renderCalendar();
+  });
+
+  renderNextUp();
+  renderCalendar();
 </script>
+
+</body>
+</html>
+
 
 </body>
 </html>
