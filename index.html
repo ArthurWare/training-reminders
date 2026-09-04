@@ -232,6 +232,141 @@
     padding: 12px;
     line-height: 1.5;
   }
+
+  .event { cursor: pointer; }
+
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 26, 33, 0.55);
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+
+  .overlay.open { display: flex; }
+
+  .modal {
+    background: var(--card);
+    border-radius: 8px;
+    width: 380px;
+    max-width: 90vw;
+    padding: 20px 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+  }
+
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .modal-close {
+    border: none;
+    background: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--text-muted);
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 12px;
+    margin: 6px 0 16px 0;
+  }
+
+  .badge.red { color: var(--red); background: #fbeceb; }
+  .badge.amber { color: var(--amber); background: #fdf3e3; }
+  .badge.green { color: var(--green); background: #ecf5ef; }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-row .label { color: var(--text-muted); }
+  .detail-row .value { font-weight: 500; text-align: right; }
+
+  .schedule-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+  }
+
+  .schedule-text {
+    font-size: 13px;
+  }
+
+  .schedule-text .sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .switch {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  .switch input { display: none; }
+
+  .slider {
+    position: absolute;
+    inset: 0;
+    background: #c7ccd2;
+    border-radius: 22px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .slider::before {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.15s;
+  }
+
+  .switch input:checked + .slider {
+    background: var(--navy);
+  }
+
+  .switch input:checked + .slider::before {
+    transform: translateX(16px);
+  }
+
+  .add-btn {
+    margin-top: 18px;
+    width: 100%;
+    padding: 9px 0;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -285,14 +420,46 @@
 
 </div>
 
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="badge" id="modal-badge"></div>
+      </div>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+
+    <div class="detail-row"><span class="label">Employee / owner</span><span class="value" id="modal-employee"></span></div>
+    <div class="detail-row"><span class="label">Email</span><span class="value" id="modal-email"></span></div>
+    <div class="detail-row"><span class="label">Department</span><span class="value" id="modal-department"></span></div>
+    <div class="detail-row"><span class="label">Expiry / due date</span><span class="value" id="modal-due"></span></div>
+    <div class="detail-row"><span class="label">Status</span><span class="value" id="modal-status"></span></div>
+    <div class="detail-row"><span class="label">Source</span><span class="value" id="modal-source"></span></div>
+
+    <div class="schedule-row">
+      <div class="schedule-text">
+        Use the global reminder schedule
+        <div class="sub">Every 30 days, starting 30 days before expiry.</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="modal-schedule-toggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <button class="add-btn" id="modal-add-btn">Add reminder</button>
+  </div>
+</div>
+
 <script>
   const reminders = [
-    { name: "Boiler service", due: "2027-01-14" },
-    { name: "MOT", due: "2027-05-21" },
-    { name: "Vehicle service", due: "2027-01-10" },
-    { name: "PAT testing", due: "2027-12-01" },
-    { name: "Priory air con service", due: "2026-09-23" },
-    { name: "F/Lea air con service", due: "2026-03-23" }
+    { name: "Boiler service", due: "2027-01-14", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { name: "MOT", due: "2027-05-21", department: "Fleet", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { name: "Vehicle service", due: "2027-01-10", department: "Fleet", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { name: "PAT testing", due: "2027-12-01", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { name: "Priory air con service", due: "2026-09-23", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { name: "F/Lea air con service", due: "2026-03-23", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true }
   ];
 
   const today = new Date();
@@ -308,6 +475,52 @@
     if (days <= 30) return "amber";
     return "green";
   }
+
+  function dayLabelFor(days) {
+    if (days < 0) return `${Math.abs(days)} days overdue`;
+    return `${days} days left`;
+  }
+
+  function statusFor(days) {
+    if (days < 0) return "Overdue";
+    if (days <= 30) return "Due";
+    return "Scheduled";
+  }
+
+  function openModal(item) {
+    const days = daysUntil(item.due);
+    const cls = urgencyClass(days);
+    const dateFmt = new Date(item.due).toLocaleDateString("en-GB");
+
+    document.getElementById("modal-title").textContent = item.name;
+    const badge = document.getElementById("modal-badge");
+    badge.textContent = dayLabelFor(days);
+    badge.className = "badge " + cls;
+
+    document.getElementById("modal-employee").textContent = item.employee || "\u2014";
+    document.getElementById("modal-email").textContent = item.email || "\u2014";
+    document.getElementById("modal-department").textContent = item.department || "\u2014";
+    document.getElementById("modal-due").textContent = dateFmt;
+    document.getElementById("modal-status").textContent = statusFor(days);
+    document.getElementById("modal-source").textContent = item.source || "Manual entry";
+    document.getElementById("modal-schedule-toggle").checked = item.scheduleOn !== false;
+
+    document.getElementById("overlay").classList.add("open");
+
+    document.getElementById("modal-add-btn").onclick = () => {
+      alert("This will push \"" + item.name + "\" to the shared Outlook calendar once sync is connected.");
+    };
+  }
+
+  document.getElementById("modal-close").addEventListener("click", () => {
+    document.getElementById("overlay").classList.remove("open");
+  });
+
+  document.getElementById("overlay").addEventListener("click", (e) => {
+    if (e.target.id === "overlay") {
+      document.getElementById("overlay").classList.remove("open");
+    }
+  });
 
   let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
@@ -328,6 +541,8 @@
         <div class="title"><span class="dot ${cls}"></span>${item.name}</div>
         <div class="meta">${dateFmt} &middot; ${dayLabel}</div>
       `;
+      div.style.cursor = "pointer";
+      div.addEventListener("click", () => openModal(item));
       el.appendChild(div);
     });
   }
@@ -350,7 +565,7 @@
       const days = daysUntil(r.due);
       const cls = urgencyClass(days);
       if (!eventsByDate[r.due]) eventsByDate[r.due] = [];
-      eventsByDate[r.due].push({ name: r.name, cls });
+      eventsByDate[r.due].push({ cls, item: r });
     });
 
     const grid = document.getElementById("grid-weeks");
@@ -375,7 +590,8 @@
         eventsByDate[key].forEach(ev => {
           const evDiv = document.createElement("div");
           evDiv.className = "event " + ev.cls;
-          evDiv.textContent = ev.name;
+          evDiv.textContent = ev.item.name;
+          evDiv.addEventListener("click", () => openModal(ev.item));
           cell.appendChild(evDiv);
         });
       }
@@ -402,10 +618,6 @@
   renderNextUp();
   renderCalendar();
 </script>
-
-</body>
-</html>
-
 
 </body>
 </html>
