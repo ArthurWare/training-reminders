@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Waretown Council - Reminders</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+    color: #222;
+  }
+  h1 {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #ddd;
+    font-size: 14px;
+  }
+  th {
+    background: #2c3e50;
+    color: #fff;
+  }
+  .synced {
+    color: #2e7d32;
+    font-weight: bold;
+  }
+  .unsynced {
+    color: #b71c1c;
+  }
+</style>
+</head>
+<body>
+
+<h1>Waretown Council - Upcoming Reminders</h1>
+
+<table>
+  <tr>
+    <th>Item</th>
+    <th>Due Date</th>
+    <th>Synced to Outlook</th>
+  </tr>
+  <tbody id="reminder-rows"></tbody>
+</table>
+
+<script>
+  const reminders = [
+    { name: "Boiler service", due: "2027-01-14", synced: false },
+    { name: "MOT", due: "2027-05-21", synced: false },
+    { name: "Vehicle service", due: "2027-01-10", synced: false },
+    { name: "PAT testing", due: "2027-12-01", synced: false },
+    { name: "Priory air con service", due: "2026-09-23", synced: false },
+    { name: "F/Lea air con service", due: "2026-03-23", synced: false }
+  ];
+
+  reminders.sort((a, b) => new Date(a.due) - new Date(b.due));
+
+  const tbody = document.getElementById("reminder-rows");
+
+  reminders.forEach(item => {
+    const row = document.createElement("tr");
+
+    const nameCell = document.createElement("td");
+    nameCell.textContent = item.name;
+
+    const dueCell = document.createElement("td");
+    dueCell.textContent = item.due;
+
+    const syncCell = document.createElement("td");
+    syncCell.textContent = item.synced ? "Yes" : "No";
+    syncCell.className = item.synced ? "synced" : "unsynced";
+
+    row.appendChild(nameCell);
+    row.appendChild(dueCell);
+    row.appendChild(syncCell);
+
+    tbody.appendChild(row);
+  });
+</script>
+
+</body>
+</html>
