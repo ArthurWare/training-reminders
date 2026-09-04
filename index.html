@@ -367,6 +367,60 @@
     font-weight: 600;
     cursor: pointer;
   }
+
+  .add-btn.secondary {
+    margin-top: 0;
+    background: #fff;
+    color: var(--navy);
+    border: 1px solid var(--navy);
+  }
+
+  .modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .edit-link {
+    border: none;
+    background: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .field-label input {
+    display: block;
+    width: 100%;
+    margin-top: 5px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    box-sizing: border-box;
+  }
+
+  .form-error {
+    display: none;
+    font-size: 12px;
+    color: var(--red);
+    margin: -4px 0 12px 0;
+  }
+
+  .form-error.show { display: block; }
 </style>
 </head>
 <body>
@@ -398,6 +452,10 @@
       <div id="next-up"></div>
     </div>
 
+    <div class="panel">
+      <button class="add-btn" id="open-add-btn" type="button">+ Add reminder</button>
+    </div>
+
     <div class="footer-note">
       Reminders shown here are entered manually. Outlook sync is not yet connected.
     </div>
@@ -427,7 +485,10 @@
         <div class="modal-title" id="modal-title"></div>
         <div class="badge" id="modal-badge"></div>
       </div>
-      <button class="modal-close" id="modal-close">&times;</button>
+      <div class="modal-header-actions">
+        <button class="edit-link" id="modal-edit-btn" type="button">Edit</button>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
     </div>
 
     <div class="detail-row"><span class="label">Employee / owner</span><span class="value" id="modal-employee"></span></div>
@@ -435,6 +496,7 @@
     <div class="detail-row"><span class="label">Department</span><span class="value" id="modal-department"></span></div>
     <div class="detail-row"><span class="label">Expiry / due date</span><span class="value" id="modal-due"></span></div>
     <div class="detail-row"><span class="label">Status</span><span class="value" id="modal-status"></span></div>
+    <div class="detail-row"><span class="label">Source</span><span class="value" id="modal-source"></span></div>
 
     <div class="schedule-row">
       <div class="schedule-text">
@@ -451,15 +513,38 @@
   </div>
 </div>
 
+<div class="overlay" id="form-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="form-title">Add reminder</div>
+      <button class="modal-close" id="form-close">&times;</button>
+    </div>
+
+    <div class="form-error" id="form-error">Name and due date are required.</div>
+
+    <form id="reminder-form">
+      <label class="field-label">Name
+        <input type="text" id="form-name" autocomplete="off">
+      </label>
+      <label class="field-label">Due date
+        <input type="date" id="form-due">
+      </label>
+      <label class="field-label">Department
+        <input type="text" id="form-department" autocomplete="off">
+      </label>
+      <label class="field-label">Employee / owner
+        <input type="text" id="form-employee" autocomplete="off">
+      </label>
+      <label class="field-label">Email
+        <input type="email" id="form-email" autocomplete="off">
+      </label>
+      <button type="submit" class="add-btn" id="form-save-btn">Save reminder</button>
+    </form>
+  </div>
+</div>
+
 <script>
-  const reminders = [
-    { name: "Boiler service", due: "2027-01-14", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
-    { name: "MOT", due: "2027-05-21", department: "Fleet", employee: "", email: "", source: "Manual entry", scheduleOn: true },
-    { name: "Vehicle service", due: "2027-01-10", department: "Fleet", employee: "", email: "", source: "Manual entry", scheduleOn: true },
-    { name: "PAT testing", due: "2027-12-01", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
-    { name: "Priory air con service", due: "2026-09-23", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
-    { name: "F/Lea air con service", due: "2026-03-23", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true }
-  ];
+  let reminders = [];
 
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -486,6 +571,12 @@
     return "Scheduled";
   }
 
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   function openModal(item) {
     const days = daysUntil(item.due);
     const cls = urgencyClass(days);
@@ -509,6 +600,11 @@
     document.getElementById("modal-add-btn").onclick = () => {
       alert("This will push \"" + item.name + "\" to the shared Outlook calendar once sync is connected.");
     };
+
+    document.getElementById("modal-edit-btn").onclick = () => {
+      document.getElementById("overlay").classList.remove("open");
+      openForm("edit", item);
+    };
   }
 
   document.getElementById("modal-close").addEventListener("click", () => {
@@ -518,6 +614,91 @@
   document.getElementById("overlay").addEventListener("click", (e) => {
     if (e.target.id === "overlay") {
       document.getElementById("overlay").classList.remove("open");
+    }
+  });
+
+  let editingId = null;
+
+  function openForm(mode, item) {
+    const form = document.getElementById("reminder-form");
+    form.reset();
+    document.getElementById("form-error").classList.remove("show");
+
+    if (mode === "edit" && item) {
+      editingId = item.id;
+      document.getElementById("form-title").textContent = "Edit reminder";
+      document.getElementById("form-save-btn").textContent = "Save changes";
+      document.getElementById("form-name").value = item.name || "";
+      document.getElementById("form-due").value = item.due || "";
+      document.getElementById("form-department").value = item.department || "";
+      document.getElementById("form-employee").value = item.employee || "";
+      document.getElementById("form-email").value = item.email || "";
+    } else {
+      editingId = null;
+      document.getElementById("form-title").textContent = "Add reminder";
+      document.getElementById("form-save-btn").textContent = "Save reminder";
+    }
+
+    document.getElementById("form-overlay").classList.add("open");
+  }
+
+  function closeForm() {
+    document.getElementById("form-overlay").classList.remove("open");
+    editingId = null;
+  }
+
+  document.getElementById("open-add-btn").addEventListener("click", () => {
+    openForm("add");
+  });
+
+  document.getElementById("form-close").addEventListener("click", closeForm);
+
+  document.getElementById("form-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "form-overlay") closeForm();
+  });
+
+  document.getElementById("reminder-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById("form-name").value.trim();
+    const due = document.getElementById("form-due").value.trim();
+    const errorEl = document.getElementById("form-error");
+
+    if (!name || !due) {
+      errorEl.classList.add("show");
+      return;
+    }
+    errorEl.classList.remove("show");
+
+    const payload = {
+      name,
+      due,
+      department: document.getElementById("form-department").value.trim(),
+      employee: document.getElementById("form-employee").value.trim(),
+      email: document.getElementById("form-email").value.trim(),
+    };
+
+    const saveBtn = document.getElementById("form-save-btn");
+    saveBtn.disabled = true;
+
+    try {
+      const url = editingId ? `/api/reminders/${editingId}` : "/api/reminders";
+      const method = editingId ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Save failed");
+
+      closeForm();
+      await loadReminders();
+    } catch (err) {
+      errorEl.textContent = "Could not save the reminder. Please try again.";
+      errorEl.classList.add("show");
+    } finally {
+      saveBtn.disabled = false;
     }
   });
 
@@ -537,7 +718,7 @@
       const dateFmt = new Date(item.due).toLocaleDateString("en-GB");
       const dayLabel = item.days < 0 ? `${Math.abs(item.days)} days overdue` : `${item.days} days`;
       div.innerHTML = `
-        <div class="title"><span class="dot ${cls}"></span>${item.name}</div>
+        <div class="title"><span class="dot ${cls}"></span>${escapeHtml(item.name)}</div>
         <div class="meta">${dateFmt} &middot; ${dayLabel}</div>
       `;
       div.style.cursor = "pointer";
@@ -614,8 +795,14 @@
     renderCalendar();
   });
 
-  renderNextUp();
-  renderCalendar();
+  async function loadReminders() {
+    const res = await fetch("/api/reminders");
+    reminders = await res.json();
+    renderNextUp();
+    renderCalendar();
+  }
+
+  loadReminders();
 </script>
 
 </body>
