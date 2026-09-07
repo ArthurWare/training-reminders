@@ -440,8 +440,11 @@
   <div>
     <div class="panel">
       <h2>Filters</h2>
-      <select id="filter-employee"><option>All employees</option></select>
-      <select id="filter-department"><option>All departments</option></select>
+      <select id="filter-department">
+        <option value="all">All departments</option>
+        <option value="Biodiversity">Biodiversity</option>
+        <option value="Maintenance">Maintenance</option>
+      </select>
       <select id="filter-urgency">
         <option value="all">All urgencies</option>
         <option value="red">Under 7 days / overdue</option>
@@ -534,7 +537,10 @@
         <input type="date" id="form-due">
       </label>
       <label class="field-label">Department
-        <input type="text" id="form-department" autocomplete="off">
+        <select id="form-department">
+          <option value="Biodiversity">Biodiversity</option>
+          <option value="Maintenance">Maintenance</option>
+        </select>
       </label>
       <label class="field-label">Employee / owner
         <input type="text" id="form-employee" autocomplete="off">
@@ -559,12 +565,12 @@
   const STORAGE_KEY = "waretown_reminders";
 
   const seedReminders = [
-    { id: "1", name: "Boiler service", due: "2027-01-14", department: "Facilities", employee: "", email: "", repeat: "yearly" },
-    { id: "2", name: "MOT", due: "2027-05-21", department: "Fleet", employee: "", email: "", repeat: "yearly" },
-    { id: "3", name: "Vehicle service", due: "2027-01-10", department: "Fleet", employee: "", email: "", repeat: "yearly" },
-    { id: "4", name: "PAT testing", due: "2027-12-01", department: "Facilities", employee: "", email: "", repeat: "yearly" },
-    { id: "5", name: "Priory air con service", due: "2026-09-23", department: "Facilities", employee: "", email: "", repeat: "yearly" },
-    { id: "6", name: "F/Lea air con service", due: "2026-03-23", department: "Facilities", employee: "", email: "", repeat: "yearly" }
+    { id: "1", name: "Boiler service", due: "2027-01-14", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
+    { id: "2", name: "MOT", due: "2027-05-21", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
+    { id: "3", name: "Vehicle service", due: "2027-01-10", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
+    { id: "4", name: "PAT testing", due: "2027-12-01", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
+    { id: "5", name: "Priory air con service", due: "2026-09-23", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
+    { id: "6", name: "F/Lea air con service", due: "2026-03-23", department: "Maintenance", employee: "", email: "", repeat: "yearly" }
   ];
 
   function loadReminders() {
@@ -798,6 +804,15 @@
 
   let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
+  function passesFilters(item, days) {
+    const deptFilter = document.getElementById("filter-department").value;
+    const urgencyFilter = document.getElementById("filter-urgency").value;
+
+    if (deptFilter !== "all" && item.department !== deptFilter) return false;
+    if (urgencyFilter !== "all" && urgencyClass(days) !== urgencyFilter) return false;
+    return true;
+  }
+
   function renderNextUp() {
     const list = reminders
       .map(r => {
@@ -805,6 +820,7 @@
         const days = Math.round((occ - today) / (1000 * 60 * 60 * 24));
         return { ...r, occ, days };
       })
+      .filter(item => passesFilters(item, item.days))
       .sort((a, b) => a.days - b.days);
 
     const el = document.getElementById("next-up");
@@ -844,6 +860,8 @@
     reminders.forEach(r => {
       const occurrences = getOccurrencesInRange(r, gridStart, gridEnd);
       occurrences.forEach(occDate => {
+        const days = Math.round((occDate - today) / (1000 * 60 * 60 * 24));
+        if (!passesFilters(r, days)) return;
         const key = occDate.toISOString().slice(0, 10);
         if (!eventsByDate[key]) eventsByDate[key] = [];
         eventsByDate[key].push({ item: r, date: occDate });
@@ -896,6 +914,16 @@
 
   document.getElementById("go-today").addEventListener("click", () => {
     viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    renderCalendar();
+  });
+
+  document.getElementById("filter-department").addEventListener("change", () => {
+    renderNextUp();
+    renderCalendar();
+  });
+
+  document.getElementById("filter-urgency").addEventListener("change", () => {
+    renderNextUp();
     renderCalendar();
   });
 
