@@ -216,6 +216,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
   }
 
   .event.red { border-color: var(--red); background: #fbeceb; }
@@ -232,8 +233,6 @@
     padding: 12px;
     line-height: 1.5;
   }
-
-  .event { cursor: pointer; }
 
   .overlay {
     display: none;
@@ -268,12 +267,40 @@
     font-weight: 700;
   }
 
+  .modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
   .modal-close {
     border: none;
     background: none;
     font-size: 16px;
     cursor: pointer;
     color: var(--text-muted);
+  }
+
+  .edit-link {
+    border: none;
+    background: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .delete-link {
+    border: none;
+    background: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--red);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
   }
 
   .badge {
@@ -307,9 +334,7 @@
     margin-top: 16px;
   }
 
-  .schedule-text {
-    font-size: 13px;
-  }
+  .schedule-text { font-size: 13px; }
 
   .schedule-text .sub {
     font-size: 12px;
@@ -347,15 +372,10 @@
     transition: transform 0.15s;
   }
 
-  .switch input:checked + .slider {
-    background: var(--navy);
-  }
+  .switch input:checked + .slider { background: var(--navy); }
+  .switch input:checked + .slider::before { transform: translateX(16px); }
 
-  .switch input:checked + .slider::before {
-    transform: translateX(16px);
-  }
-
-  .add-btn {
+  .btn {
     margin-top: 18px;
     width: 100%;
     padding: 9px 0;
@@ -368,39 +388,6 @@
     cursor: pointer;
   }
 
-  .add-btn.secondary {
-    margin-top: 0;
-    background: #fff;
-    color: var(--navy);
-    border: 1px solid var(--navy);
-  }
-
-  .modal-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .edit-link {
-    border: none;
-    background: none;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--navy);
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-  }
-  .delete-link {
-    border: none;
-    background: none;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--red);
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-  }
   .field-label {
     display: block;
     font-size: 12px;
@@ -419,7 +406,6 @@
     font-size: 13px;
     font-family: inherit;
     color: var(--text);
-    box-sizing: border-box;
   }
 
   .form-error {
@@ -462,11 +448,11 @@
     </div>
 
     <div class="panel">
-      <button class="add-btn" id="open-add-btn" type="button">+ Add reminder</button>
+      <button class="btn" id="open-add-btn" type="button">+ Add reminder</button>
     </div>
 
     <div class="footer-note">
-      Reminders shown here are entered manually. Outlook sync is not yet connected.
+      Reminders shown here are entered manually and saved in this browser. Outlook sync is not yet connected.
     </div>
   </div>
 
@@ -496,7 +482,7 @@
       </div>
       <div class="modal-header-actions">
         <button class="edit-link" id="modal-edit-btn" type="button">Edit</button>
-         <button class="delete-link" id="modal-delete-btn" type="button">Delete</button>
+        <button class="delete-link" id="modal-delete-btn" type="button">Delete</button>
         <button class="modal-close" id="modal-close">&times;</button>
       </div>
     </div>
@@ -519,7 +505,7 @@
       </label>
     </div>
 
-    <button class="add-btn" id="modal-add-btn">Add reminder</button>
+    <button class="btn" id="modal-add-btn">Add reminder</button>
   </div>
 </div>
 
@@ -548,13 +534,41 @@
       <label class="field-label">Email
         <input type="email" id="form-email" autocomplete="off">
       </label>
-      <button type="submit" class="add-btn" id="form-save-btn">Save reminder</button>
+      <button type="submit" class="btn" id="form-save-btn">Save reminder</button>
     </form>
   </div>
 </div>
 
 <script>
-  let reminders = [];
+  const STORAGE_KEY = "waretown_reminders";
+
+  const seedReminders = [
+    { id: "1", name: "Boiler service", due: "2027-01-14", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { id: "2", name: "MOT", due: "2027-05-21", department: "Fleet", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { id: "3", name: "Vehicle service", due: "2027-01-10", department: "Fleet", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { id: "4", name: "PAT testing", due: "2027-12-01", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { id: "5", name: "Priory air con service", due: "2026-09-23", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true },
+    { id: "6", name: "F/Lea air con service", due: "2026-03-23", department: "Facilities", employee: "", email: "", source: "Manual entry", scheduleOn: true }
+  ];
+
+  function loadReminders() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(seedReminders));
+      return [...seedReminders];
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return [...seedReminders];
+    }
+  }
+
+  function saveReminders(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  let reminders = loadReminders();
 
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -607,20 +621,15 @@
 
     document.getElementById("overlay").classList.add("open");
 
-    document.getElementById("modal-delete-btn").onclick = async () => {
-  if (confirm("Are you sure you want to delete this reminder?")) {
-    try {
-      const res = await fetch(`/api/reminders/${item.id}`, {
-        method: "DELETE"
-      });
-      if (!res.ok) throw new Error("Delete failed");
-      document.getElementById("overlay").classList.remove("open");
-      await loadReminders();
-    } catch (err) {
-      alert("Could not delete the reminder. Please try again.");
-    }
-  }
-};
+    document.getElementById("modal-delete-btn").onclick = () => {
+      if (confirm("Are you sure you want to delete this reminder?")) {
+        reminders = reminders.filter(r => r.id !== item.id);
+        saveReminders(reminders);
+        document.getElementById("overlay").classList.remove("open");
+        renderNextUp();
+        renderCalendar();
+      }
+    };
 
     document.getElementById("modal-add-btn").onclick = () => {
       alert("This will push \"" + item.name + "\" to the shared Outlook calendar once sync is connected.");
@@ -682,7 +691,7 @@
     if (e.target.id === "form-overlay") closeForm();
   });
 
-  document.getElementById("reminder-form").addEventListener("submit", async (e) => {
+  document.getElementById("reminder-form").addEventListener("submit", (e) => {
     e.preventDefault();
 
     const name = document.getElementById("form-name").value.trim();
@@ -690,41 +699,34 @@
     const errorEl = document.getElementById("form-error");
 
     if (!name || !due) {
+      errorEl.textContent = "Name and due date are required.";
       errorEl.classList.add("show");
       return;
     }
     errorEl.classList.remove("show");
 
-    const payload = {
-      name,
-      due,
-      department: document.getElementById("form-department").value.trim(),
-      employee: document.getElementById("form-employee").value.trim(),
-      email: document.getElementById("form-email").value.trim(),
-    };
+    const department = document.getElementById("form-department").value.trim();
+    const employee = document.getElementById("form-employee").value.trim();
+    const email = document.getElementById("form-email").value.trim();
 
-    const saveBtn = document.getElementById("form-save-btn");
-    saveBtn.disabled = true;
-
-    try {
-      const url = editingId ? `/api/reminders/${editingId}` : "/api/reminders";
-      const method = editingId ? "PATCH" : "POST";
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    if (editingId) {
+      reminders = reminders.map(r => r.id === editingId
+        ? { ...r, name, due, department, employee, email }
+        : r
+      );
+    } else {
+      reminders.push({
+        id: Date.now().toString(),
+        name, due, department, employee, email,
+        source: "Manual entry",
+        scheduleOn: true
       });
-
-      if (!res.ok) throw new Error("Save failed");
-
-      closeForm();
-      await loadReminders();
-    } catch (err) {
-      errorEl.textContent = "Could not save the reminder. Please try again.";
-      errorEl.classList.add("show");
-    } finally {
-      saveBtn.disabled = false;
     }
+
+    saveReminders(reminders);
+    closeForm();
+    renderNextUp();
+    renderCalendar();
   });
 
   let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -767,10 +769,8 @@
 
     const eventsByDate = {};
     reminders.forEach(r => {
-      const days = daysUntil(r.due);
-      const cls = urgencyClass(days);
       if (!eventsByDate[r.due]) eventsByDate[r.due] = [];
-      eventsByDate[r.due].push({ cls, item: r });
+      eventsByDate[r.due].push(r);
     });
 
     const grid = document.getElementById("grid-weeks");
@@ -792,11 +792,13 @@
 
       const key = cellDate.toISOString().slice(0, 10);
       if (eventsByDate[key]) {
-        eventsByDate[key].forEach(ev => {
+        eventsByDate[key].forEach(item => {
+          const days = daysUntil(item.due);
+          const cls = urgencyClass(days);
           const evDiv = document.createElement("div");
-          evDiv.className = "event " + ev.cls;
-          evDiv.textContent = ev.item.name;
-          evDiv.addEventListener("click", () => openModal(ev.item));
+          evDiv.className = "event " + cls;
+          evDiv.textContent = item.name;
+          evDiv.addEventListener("click", () => openModal(item));
           cell.appendChild(evDiv);
         });
       }
@@ -820,14 +822,8 @@
     renderCalendar();
   });
 
-  async function loadReminders() {
-    const res = await fetch("/api/reminders");
-    reminders = await res.json();
-    renderNextUp();
-    renderCalendar();
-  }
-
-  loadReminders();
+  renderNextUp();
+  renderCalendar();
 </script>
 
 </body>
