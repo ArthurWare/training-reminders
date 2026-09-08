@@ -562,35 +562,45 @@
 </div>
 
 <script>
-  const STORAGE_KEY = "waretown_reminders";
+  const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzwmy5stcaouJtAvneEDvz7KxnMheXMpJgu7EwmKI_4c1ZeoRhcmpJYRVyvqqjUWEA0/exec";
 
-  const seedReminders = [
-    { id: "1", name: "Boiler service", due: "2027-01-14", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
-    { id: "2", name: "MOT", due: "2027-05-21", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
-    { id: "3", name: "Vehicle service", due: "2027-01-10", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
-    { id: "4", name: "PAT testing", due: "2027-12-01", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
-    { id: "5", name: "Priory air con service", due: "2026-09-23", department: "Maintenance", employee: "", email: "", repeat: "yearly" },
-    { id: "6", name: "F/Lea air con service", due: "2026-03-23", department: "Maintenance", employee: "", email: "", repeat: "yearly" }
-  ];
+  let reminders = [];
 
-  function loadReminders() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(seedReminders));
-      return [...seedReminders];
-    }
+  async function loadReminders() {
     try {
-      return JSON.parse(raw);
-    } catch (e) {
-      return [...seedReminders];
+      const res = await fetch(SHEET_API_URL);
+      reminders = await res.json();
+    } catch (err) {
+      alert("Could not load reminders. Check your connection and try again.");
+      reminders = [];
     }
+    renderNextUp();
+    renderCalendar();
   }
 
-  function saveReminders(list) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  async function addReminder(payload) {
+    await fetch(SHEET_API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "add", ...payload })
+    });
+    await loadReminders();
   }
 
-  let reminders = loadReminders();
+  async function updateReminder(id, payload) {
+    await fetch(SHEET_API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "update", id, ...payload })
+    });
+    await loadReminders();
+  }
+
+  async function deleteReminder(id) {
+    await fetch(SHEET_API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "delete", id })
+    });
+    await loadReminders();
+  }
 
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -693,13 +703,10 @@
 
     document.getElementById("overlay").classList.add("open");
 
-    document.getElementById("modal-delete-btn").onclick = () => {
+    document.getElementById("modal-delete-btn").onclick = async () => {
       if (confirm("Are you sure you want to delete this reminder?")) {
-        reminders = reminders.filter(r => r.id !== item.id);
-        saveReminders(reminders);
         document.getElementById("overlay").classList.remove("open");
-        renderNextUp();
-        renderCalendar();
+        await deleteReminder(item.id);
       }
     };
 
@@ -765,7 +772,7 @@
     if (e.target.id === "form-overlay") closeForm();
   });
 
-  document.getElementById("reminder-form").addEventListener("submit", (e) => {
+  document.getElementById("reminder-form").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const name = document.getElementById("form-name").value.trim();
@@ -784,22 +791,24 @@
     const email = document.getElementById("form-email").value.trim();
     const repeat = document.getElementById("form-repeat").value;
 
-    if (editingId) {
-      reminders = reminders.map(r => r.id === editingId
-        ? { ...r, name, due, department, employee, email, repeat }
-        : r
-      );
-    } else {
-      reminders.push({
-        id: Date.now().toString(),
-        name, due, department, employee, email, repeat
-      });
-    }
+    const payload = { name, due, department, employee, email, repeat };
 
-    saveReminders(reminders);
-    closeForm();
-    renderNextUp();
-    renderCalendar();
+    const saveBtn = document.getElementById("form-save-btn");
+    saveBtn.disabled = true;
+
+    try {
+      if (editingId) {
+        await updateReminder(editingId, payload);
+      } else {
+        await addReminder(payload);
+      }
+      closeForm();
+    } catch (err) {
+      errorEl.textContent = "Could not save the reminder. Please try again.";
+      errorEl.classList.add("show");
+    } finally {
+      saveBtn.disabled = false;
+    }
   });
 
   let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -927,9 +936,9 @@
     renderCalendar();
   });
 
-  renderNextUp();
-  renderCalendar();
+  loadReminders();
 </script>
 
 </body>
 </html>
+
